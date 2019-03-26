@@ -10,6 +10,7 @@ local fish = {
 
         f.update = function(self)
             -- @TODO Move
+            -- @TODO Bite
 
             -- Show / hide randomly
             if (flr(rnd(100)) == 1) then

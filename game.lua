@@ -5,6 +5,7 @@ renderer = require('renderer')
 v2 = require('v2')
 
 fish = require('fish')
+rod = require('rod')
 
 map = 1
 water = {13, 12, 1}
@@ -13,6 +14,7 @@ cam = nil
 fishes = nil
 scene = nil
 state = "ingame"
+p1_rod = nil
 
 function _init()
     log.debug = true
@@ -25,9 +27,12 @@ function _init()
     fishes = {}
     add(fishes, fish.mk('f1', 10, 20))
     add(fishes, fish.mk('f2', 60, 92))
-
     add(scene, fishes[1])
     add(scene, fishes[2])
+
+    p1_rod = rod.mk('rod', 64, 110)
+    add(scene, p1_rod)
+    add(scene, p1_rod.lure)
 end
 
 function _update()
@@ -36,6 +41,13 @@ function _update()
             if obj.update then
                 obj.update(obj)
             end
+        end
+
+        if btnp(4) then
+            p1_rod.set_state(p1_rod, 'cast')
+        end
+        if btnp(5) then
+            p1_rod.set_state(p1_rod, 'idle')
         end
 
         -- Map toggle
