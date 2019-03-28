@@ -53,6 +53,7 @@ function _update()
             if btnp(1) then
                 p1_rod.cast_angle -= 0.05
             end
+            p1_rod.cast_angle = mid(0.55, p1_rod.cast_angle, 0.95)
 
             -- @TODO Control cast distance
             -- @TODO Show cast distance meter

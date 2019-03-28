@@ -53,14 +53,16 @@ local rod = {
                 self.lure.x += self.vel.x
                 self.lure.y += self.vel.y
 
-                if self.lure.y <= self.y - 10 - self.cast_distance then
+                local distance = v2.mag(v2.mk(self.lure.x, self.lure.y) - v2.mk(self.x, self.y))
+                if distance >= self.cast_distance then
                     self.set_state(self, 'reeling')
                 end
             elseif self.state == 'reeling' then
                 self.lure.x += self.vel.x
                 self.lure.y += self.vel.y
 
-                if self.lure.y >= self.y - 10 then
+                local distance = v2.mag(v2.mk(self.lure.x, self.lure.y) - v2.mk(self.x, self.y))
+                if distance <= 12 then
                     self.set_state(self, 'idle')
                 end
             end
