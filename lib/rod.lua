@@ -14,12 +14,15 @@ local rod = {
         local r = game_obj.mk(name, 'rod', x, y)
         r.lure = lure.mk('lure', x, y - 10)
         r.cursor = cursor.mk('cursor', x, y - 10)
+        r.cast_speed = 1.5
 
         r.state = nil
-        r.vel = v2.mk(0, 0)
-        r.cast_speed = 1.5
-        r.cast_distance = 0
-        r.cast_angle = 0.75
+        r.vel = nil
+        r.cast_distance = nil
+        r.cast_angle = nil
+        r.can_cast = false
+        r.can_reel = false
+        r.auto_reeling = false
 
         renderer.attach(r, 3)
 
@@ -41,6 +44,13 @@ local rod = {
         r.reel = function(self, distance)
             if self.state == 'reeling' then
                 self.vel = distance * calculate_cast_dir(self.cast_angle)
+            end
+        end
+
+        r.auto_reel = function(self, distance)
+            if self.state == 'reeling' then
+                self.auto_reeling = true
+                self.reel(self, distance)
             end
         end
 
@@ -69,12 +79,10 @@ local rod = {
         end
 
         r.is_in_water = function(self)
-            return self.state == 'reeling'
+            return self.state == 'reeling' and not self.auto_reeling
         end
 
         r.set_state = function(self, state)
-            -- @TODO Reeling
-
             if state == 'idle' and self.state ~= state then
                 self.lure.x = self.x
                 self.lure.y = self.y - 10
@@ -83,13 +91,16 @@ local rod = {
                 self.vel = v2.zero()
                 self.cast_distance = 0
                 self.cast_angle = 0.75
+                self.auto_reeling = false
                 self.state = state
-            elseif state == 'casting' and self.state == 'idle' then
+            elseif state == 'casting' and self.state == 'idle' and self.can_cast == true then
                 local dir = -self.cast_speed * calculate_cast_dir(self.cast_angle)
                 self.vel = dir
                 self.lure.renderable.enabled = true
                 self.cursor.renderable.enabled = false
                 self.state = state
+                self.can_cast = false
+                self.can_reel = false
             elseif state == 'reeling' and self.state == 'casting' then
                 self.vel = v2.zero()
                 self.cast_distance = 0

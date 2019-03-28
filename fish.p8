@@ -328,12 +328,15 @@ local rod = {
         local r = game_obj.mk(name, 'rod', x, y)
         r.lure = lure.mk('lure', x, y - 10)
         r.cursor = cursor.mk('cursor', x, y - 10)
+        r.cast_speed = 1.5
 
         r.state = nil
-        r.vel = v2.mk(0, 0)
-        r.cast_speed = 1.5
-        r.cast_distance = 0
-        r.cast_angle = 0.75
+        r.vel = nil
+        r.cast_distance = nil
+        r.cast_angle = nil
+        r.can_cast = false
+        r.can_reel = false
+        r.auto_reeling = false
 
         renderer.attach(r, 3)
 
@@ -355,6 +358,13 @@ local rod = {
         r.reel = function(self, distance)
             if self.state == 'reeling' then
                 self.vel = distance * calculate_cast_dir(self.cast_angle)
+            end
+        end
+
+        r.auto_reel = function(self, distance)
+            if self.state == 'reeling' then
+                self.auto_reeling = true
+                self.reel(self, distance)
             end
         end
 
@@ -383,12 +393,10 @@ local rod = {
         end
 
         r.is_in_water = function(self)
-            return self.state == 'reeling'
+            return self.state == 'reeling' and not self.auto_reeling
         end
 
         r.set_state = function(self, state)
-            -- @TODO Reeling
-
             if state == 'idle' and self.state ~= state then
                 self.lure.x = self.x
                 self.lure.y = self.y - 10
@@ -397,13 +405,16 @@ local rod = {
                 self.vel = v2.zero()
                 self.cast_distance = 0
                 self.cast_angle = 0.75
+                self.auto_reeling = false
                 self.state = state
-            elseif state == 'casting' and self.state == 'idle' then
+            elseif state == 'casting' and self.state == 'idle' and self.can_cast == true then
                 local dir = -self.cast_speed * calculate_cast_dir(self.cast_angle)
                 self.vel = dir
                 self.lure.renderable.enabled = true
                 self.cursor.renderable.enabled = false
                 self.state = state
+                self.can_cast = false
+                self.can_reel = false
             elseif state == 'reeling' and self.state == 'casting' then
                 self.vel = v2.zero()
                 self.cast_distance = 0
@@ -507,29 +518,38 @@ function _update()
         -- @TODO Show cast direction cursor
         -- @TODO Don't cast if we just got out of reeling state and user hasn't let go of button
         if p1_rod.state == 'idle' then
-            if btnp(0) then
-                p1_rod.cast_angle += 0.05
-            end
-            if btnp(1) then
-                p1_rod.cast_angle -= 0.05
-            end
-            p1_rod.cast_angle = mid(0.55, p1_rod.cast_angle, 0.95)
+            if (not p1_rod.can_cast) then
+                if not btn(4) then
+                    p1_rod.can_cast = true
+                end
+            else
+                if btnp(0) then
+                    p1_rod.cast_angle += 0.05
+                end
+                if btnp(1) then
+                    p1_rod.cast_angle -= 0.05
+                end
+                p1_rod.cast_angle = mid(0.55, p1_rod.cast_angle, 0.95)
 
-            -- @TODO Control cast distance
-            -- @TODO Show cast distance meter
-            if btnp(4) then
-                p1_rod.cast(p1_rod, 50)
+                -- @TODO Control cast distance
+                -- @TODO Show cast distance meter
+                if btnp(4) then
+                    p1_rod.cast(p1_rod, 50)
+                end
             end
         elseif p1_rod.state == 'reeling' then
-            if btn(4) then
-                p1_rod.reel(p1_rod, 1)
+            if not p1_rod.can_reel then
+                if not btn(4) then
+                    p1_rod.can_reel = true
+                end
             else
-                p1_rod.reel(p1_rod, 0)
-            end
-
-            -- @TODO Auto-reel
-            if btnp(5) then
-                p1_rod.set_state(p1_rod, 'idle')
+                if btnp(5) then
+                    p1_rod.auto_reel(p1_rod, 1)
+                elseif btn(4) then
+                    p1_rod.reel(p1_rod, 1)
+                elseif not p1_rod.auto_reeling then
+                    p1_rod.reel(p1_rod, 0)
+                end
             end
         end
 
@@ -557,14 +577,14 @@ function _draw()
     log.render()
 end
 __gfx__
-00000000022002200099990000040000000770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000220000000900000040000007007000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000030002222000000900000040000070000700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000300022222200000900000040000700770070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-03003000022222200000900000040000700770070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00330000022222200000900000040000070000700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00030000002222000900900000555500007007000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00030000000220000099000000044000000770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000022002200099990000040000eee77eee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000220000000900000040000ee7ee7ee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000030002222000000900000040000e7eeee7e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000003000222222000009000000400007ee77ee70000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+030030000222222000009000000400007ee77ee70000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00330000022222200000900000040000e7eeee7e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00030000002222000900900000555500ee7ee7ee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00030000000220000099000000044000eee77eee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 
 __gff__
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000

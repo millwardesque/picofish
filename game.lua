@@ -47,29 +47,38 @@ function _update()
         -- @TODO Show cast direction cursor
         -- @TODO Don't cast if we just got out of reeling state and user hasn't let go of button
         if p1_rod.state == 'idle' then
-            if btnp(0) then
-                p1_rod.cast_angle += 0.05
-            end
-            if btnp(1) then
-                p1_rod.cast_angle -= 0.05
-            end
-            p1_rod.cast_angle = mid(0.55, p1_rod.cast_angle, 0.95)
+            if (not p1_rod.can_cast) then
+                if not btn(4) then
+                    p1_rod.can_cast = true
+                end
+            else
+                if btnp(0) then
+                    p1_rod.cast_angle += 0.05
+                end
+                if btnp(1) then
+                    p1_rod.cast_angle -= 0.05
+                end
+                p1_rod.cast_angle = mid(0.55, p1_rod.cast_angle, 0.95)
 
-            -- @TODO Control cast distance
-            -- @TODO Show cast distance meter
-            if btnp(4) then
-                p1_rod.cast(p1_rod, 50)
+                -- @TODO Control cast distance
+                -- @TODO Show cast distance meter
+                if btnp(4) then
+                    p1_rod.cast(p1_rod, 50)
+                end
             end
         elseif p1_rod.state == 'reeling' then
-            if btn(4) then
-                p1_rod.reel(p1_rod, 1)
+            if not p1_rod.can_reel then
+                if not btn(4) then
+                    p1_rod.can_reel = true
+                end
             else
-                p1_rod.reel(p1_rod, 0)
-            end
-
-            -- @TODO Auto-reel
-            if btnp(5) then
-                p1_rod.set_state(p1_rod, 'idle')
+                if btnp(5) then
+                    p1_rod.auto_reel(p1_rod, 1)
+                elseif btn(4) then
+                    p1_rod.reel(p1_rod, 1)
+                elseif not p1_rod.auto_reeling then
+                    p1_rod.reel(p1_rod, 0)
+                end
             end
         end
 
