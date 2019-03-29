@@ -52,6 +52,8 @@ local game_cam = {
 return game_cam
 end
 package._c["game_obj"]=function()
+v2 = require('v2')
+
 local game_obj = {
     mk = function(name, type, pos_x, pos_y)
         local g = {
@@ -63,10 +65,75 @@ local game_obj = {
         g.update = function(self)
         end
 
+        g.v2_pos = function(self)
+            return v2.mk(self.x, self.y)
+        end
+
         return g
     end
 }
 return game_obj
+end
+package._c["v2"]=function()
+local v2 = {
+    mk = function(x, y)
+        local v = {x = x, y = y,}
+        setmetatable(v, v2.meta)
+        return v;
+    end,
+    clone = function(x, y)
+        return v2.mk(v.x, v.y)
+    end,
+    zero = function()
+        return v2.mk(0, 0)
+    end,
+    mag = function(v)
+        if v.x == 0 and v.y == 0 then
+            return 0
+        else
+            return sqrt(v.x ^ 2 + v.y ^ 2)
+        end
+    end,
+    norm = function(v)
+        local m = v2.mag(v)
+        if m == 0 then
+            return v
+        else
+            return v2.mk(v.x / m, v.y / m)
+        end
+    end,
+    str = function(v)
+        return "("..v.x..", "..v.y..")"
+    end,
+    meta = {
+        __add = function (a, b)
+            return v2.mk(a.x + b.x, a.y + b.y)
+        end,
+
+        __sub = function (a, b)
+            return v2.mk(a.x - b.x, a.y - b.y)
+        end,
+
+        __mul = function (a, b)
+            if type(a) == "number" then
+                return v2.mk(a * b.x, a * b.y)
+            elseif type(b) == "number" then
+                return v2.mk(b * a.x, b * a.y)
+            else
+                return v2.mk(a.x * b.x, a.y * b.y)
+            end
+        end,
+
+        __div = function(a, b)
+            v2.mk(a.x / b, a.y / b)
+        end,
+
+        __eq = function (a, b)
+            return a.x == b.x and a.y == b.y
+        end,
+    },
+}
+return v2
 end
 package._c["log"]=function()
 local log = {
@@ -209,67 +276,6 @@ local renderer = {
 }
 return renderer
 end
-package._c["v2"]=function()
-local v2 = {
-    mk = function(x, y)
-        local v = {x = x, y = y,}
-        setmetatable(v, v2.meta)
-        return v;
-    end,
-    clone = function(x, y)
-        return v2.mk(v.x, v.y)
-    end,
-    zero = function()
-        return v2.mk(0, 0)
-    end,
-    mag = function(v)
-        if v.x == 0 and v.y == 0 then
-            return 0
-        else
-            return sqrt(v.x ^ 2 + v.y ^ 2)
-        end
-    end,
-    norm = function(v)
-        local m = v2.mag(v)
-        if m == 0 then
-            return v
-        else
-            return v2.mk(v.x / m, v.y / m)
-        end
-    end,
-    str = function(v)
-        return "("..v.x..", "..v.y..")"
-    end,
-    meta = {
-        __add = function (a, b)
-            return v2.mk(a.x + b.x, a.y + b.y)
-        end,
-
-        __sub = function (a, b)
-            return v2.mk(a.x - b.x, a.y - b.y)
-        end,
-
-        __mul = function (a, b)
-            if type(a) == "number" then
-                return v2.mk(a * b.x, a * b.y)
-            elseif type(b) == "number" then
-                return v2.mk(b * a.x, b * a.y)
-            else
-                return v2.mk(a.x * b.x, a.y * b.y)
-            end
-        end,
-
-        __div = function(a, b)
-            v2.mk(a.x / b, a.y / b)
-        end,
-
-        __eq = function (a, b)
-            return a.x == b.x and a.y == b.y
-        end,
-    },
-}
-return v2
-end
 package._c["fish"]=function()
 game_obj = require('game_obj')
 log = require('log')
@@ -323,11 +329,17 @@ function calculate_cast_dir(angle)
     return v2.mk(cos(angle), sin(angle))
 end
 
+function lure_home(r)
+    return v2.mk(r.x, r.y - 10)
+end
+
 local rod = {
     mk = function(name, x, y)
         local r = game_obj.mk(name, 'rod', x, y)
-        r.lure = lure.mk('lure', x, y - 10)
-        r.cursor = cursor.mk('cursor', x, y - 10)
+        local lure_pos = lure_home(r)
+
+        r.lure = lure.mk('lure', lure_pos.x, lure_pos.y)
+        r.cursor = cursor.mk('cursor', lure_pos.x, lure_pos.y)
         r.cast_speed = 1.5
 
         r.state = nil
@@ -348,17 +360,29 @@ local rod = {
             end
         end
 
+        r.dist_to_reel = function(self)
+            return v2.mag(lure_home(self) - self.lure.v2_pos(self.lure))
+        end
+
+        r.dir_to_reel = function(self)
+            return self.dir_to_reel_offset(self, v2.zero())
+        end
+
+        r.dir_to_reel_offset = function(self, offset)
+            return v2.norm((lure_home(self) + v2.mk(offset.x, offset.y)) - self.lure.v2_pos(self.lure))
+        end
+
         r.cast = function(self, distance)
-            if self.state == 'idle' then
-                self.cast_distance = distance
-                self.set_state(self, 'casting')
-            end
+            self.cast_distance = distance
+            self.set_state(self, 'casting')
         end
 
         r.reel = function(self, distance)
-            if self.state == 'reeling' then
-                self.vel = distance * calculate_cast_dir(self.cast_angle)
-            end
+            self.vel = distance * self.dir_to_reel(self)
+        end
+
+        r.drag = function(self, distance, x_offset)
+            self.vel = distance * self.dir_to_reel_offset(self, v2.mk(x_offset, abs(x_offset) * 2.0 / 3.0))
         end
 
         r.auto_reel = function(self, distance)
@@ -377,7 +401,7 @@ local rod = {
                 self.lure.x += self.vel.x
                 self.lure.y += self.vel.y
 
-                local distance = v2.mag(v2.mk(self.lure.x, self.lure.y) - v2.mk(self.x, self.y))
+                local distance = self.dist_to_reel(self)
                 if distance >= self.cast_distance then
                     self.set_state(self, 'reeling')
                 end
@@ -385,7 +409,17 @@ local rod = {
                 self.lure.x += self.vel.x
                 self.lure.y += self.vel.y
 
-                local distance = v2.mag(v2.mk(self.lure.x, self.lure.y) - v2.mk(self.x, self.y))
+                --if v2.mag(v2.mk(self.lure.x, self.lure.y) - v2.mk(self.x, self.y - 10)) > self.cast_distance then
+                --    local new_lure = self.cast_distance * v2.norm(v2.mk(self.lure.x, self.lure.y) - v2.mk(self.x, self.y))
+                --    self.lure.x = self.x + new_lure.x
+                --    self.lure.y = self.y - 10 - new_lure.y
+                --end
+
+                if self.lure.y > lure_home(self).y then
+                    self.lure.y = lure_home(self).y
+                end
+
+                local distance = self.dist_to_reel(self)
                 if distance <= 12 then
                     self.set_state(self, 'idle')
                 end
@@ -398,8 +432,8 @@ local rod = {
 
         r.set_state = function(self, state)
             if state == 'idle' and self.state ~= state then
-                self.lure.x = self.x
-                self.lure.y = self.y - 10
+                self.lure.x = lure_home(self).x
+                self.lure.y = lure_home(self).y
                 self.lure.renderable.enabled = false
                 self.cursor.renderable.enabled = true
                 self.vel = v2.zero()
@@ -515,8 +549,6 @@ function _update()
             end
         end
 
-        -- @TODO Show cast direction cursor
-        -- @TODO Don't cast if we just got out of reeling state and user hasn't let go of button
         if p1_rod.state == 'idle' then
             if (not p1_rod.can_cast) then
                 if not btn(4) then
@@ -543,12 +575,20 @@ function _update()
                     p1_rod.can_reel = true
                 end
             else
-                if btnp(5) then
-                    p1_rod.auto_reel(p1_rod, 1)
-                elseif btn(4) then
-                    p1_rod.reel(p1_rod, 1)
-                elseif not p1_rod.auto_reeling then
-                    p1_rod.reel(p1_rod, 0)
+                if not p1_rod.auto_reeling then
+                    if btnp(5) then
+                        p1_rod.auto_reel(p1_rod, 1)
+                    elseif btn(4) then
+                        if btn(0) then
+                            p1_rod.drag(p1_rod, 1, -10)
+                        elseif btn(1) then
+                            p1_rod.drag(p1_rod, 1, 10)
+                        else
+                            p1_rod.reel(p1_rod, 1)
+                        end
+                    else
+                        p1_rod.reel(p1_rod, 0)
+                    end
                 end
             end
         end

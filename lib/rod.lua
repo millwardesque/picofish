@@ -9,11 +9,17 @@ function calculate_cast_dir(angle)
     return v2.mk(cos(angle), sin(angle))
 end
 
+function lure_home(r)
+    return v2.mk(r.x, r.y - 10)
+end
+
 local rod = {
     mk = function(name, x, y)
         local r = game_obj.mk(name, 'rod', x, y)
-        r.lure = lure.mk('lure', x, y - 10)
-        r.cursor = cursor.mk('cursor', x, y - 10)
+        local lure_pos = lure_home(r)
+
+        r.lure = lure.mk('lure', lure_pos.x, lure_pos.y)
+        r.cursor = cursor.mk('cursor', lure_pos.x, lure_pos.y)
         r.cast_speed = 1.5
 
         r.state = nil
@@ -34,17 +40,29 @@ local rod = {
             end
         end
 
+        r.dist_to_reel = function(self)
+            return v2.mag(lure_home(self) - self.lure.v2_pos(self.lure))
+        end
+
+        r.dir_to_reel = function(self)
+            return self.dir_to_reel_offset(self, v2.zero())
+        end
+
+        r.dir_to_reel_offset = function(self, offset)
+            return v2.norm((lure_home(self) + v2.mk(offset.x, offset.y)) - self.lure.v2_pos(self.lure))
+        end
+
         r.cast = function(self, distance)
-            if self.state == 'idle' then
-                self.cast_distance = distance
-                self.set_state(self, 'casting')
-            end
+            self.cast_distance = distance
+            self.set_state(self, 'casting')
         end
 
         r.reel = function(self, distance)
-            if self.state == 'reeling' then
-                self.vel = distance * calculate_cast_dir(self.cast_angle)
-            end
+            self.vel = distance * self.dir_to_reel(self)
+        end
+
+        r.drag = function(self, distance, x_offset)
+            self.vel = distance * self.dir_to_reel_offset(self, v2.mk(x_offset, abs(x_offset) * 2.0 / 3.0))
         end
 
         r.auto_reel = function(self, distance)
@@ -63,7 +81,7 @@ local rod = {
                 self.lure.x += self.vel.x
                 self.lure.y += self.vel.y
 
-                local distance = v2.mag(v2.mk(self.lure.x, self.lure.y) - v2.mk(self.x, self.y))
+                local distance = self.dist_to_reel(self)
                 if distance >= self.cast_distance then
                     self.set_state(self, 'reeling')
                 end
@@ -71,7 +89,17 @@ local rod = {
                 self.lure.x += self.vel.x
                 self.lure.y += self.vel.y
 
-                local distance = v2.mag(v2.mk(self.lure.x, self.lure.y) - v2.mk(self.x, self.y))
+                --if v2.mag(v2.mk(self.lure.x, self.lure.y) - v2.mk(self.x, self.y - 10)) > self.cast_distance then
+                --    local new_lure = self.cast_distance * v2.norm(v2.mk(self.lure.x, self.lure.y) - v2.mk(self.x, self.y))
+                --    self.lure.x = self.x + new_lure.x
+                --    self.lure.y = self.y - 10 - new_lure.y
+                --end
+
+                if self.lure.y > lure_home(self).y then
+                    self.lure.y = lure_home(self).y
+                end
+
+                local distance = self.dist_to_reel(self)
                 if distance <= 12 then
                     self.set_state(self, 'idle')
                 end
@@ -84,8 +112,8 @@ local rod = {
 
         r.set_state = function(self, state)
             if state == 'idle' and self.state ~= state then
-                self.lure.x = self.x
-                self.lure.y = self.y - 10
+                self.lure.x = lure_home(self).x
+                self.lure.y = lure_home(self).y
                 self.lure.renderable.enabled = false
                 self.cursor.renderable.enabled = true
                 self.vel = v2.zero()

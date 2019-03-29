@@ -44,8 +44,6 @@ function _update()
             end
         end
 
-        -- @TODO Show cast direction cursor
-        -- @TODO Don't cast if we just got out of reeling state and user hasn't let go of button
         if p1_rod.state == 'idle' then
             if (not p1_rod.can_cast) then
                 if not btn(4) then
@@ -72,12 +70,20 @@ function _update()
                     p1_rod.can_reel = true
                 end
             else
-                if btnp(5) then
-                    p1_rod.auto_reel(p1_rod, 1)
-                elseif btn(4) then
-                    p1_rod.reel(p1_rod, 1)
-                elseif not p1_rod.auto_reeling then
-                    p1_rod.reel(p1_rod, 0)
+                if not p1_rod.auto_reeling then
+                    if btnp(5) then
+                        p1_rod.auto_reel(p1_rod, 1)
+                    elseif btn(4) then
+                        if btn(0) then
+                            p1_rod.drag(p1_rod, 1, -10)
+                        elseif btn(1) then
+                            p1_rod.drag(p1_rod, 1, 10)
+                        else
+                            p1_rod.reel(p1_rod, 1)
+                        end
+                    else
+                        p1_rod.reel(p1_rod, 0)
+                    end
                 end
             end
         end
