@@ -1,0 +1,13 @@
+Fish swim
+Fish bite
+Fish resist reeling
+Fish stamina
+Fish caught
+Lake map
+Fish types
+Fish size
+Drag left / right
+Cast strength cycling
+Camera follow rod upstream
+Lure types
+Follow lure with camera

@@ -18,6 +18,29 @@ state = "ingame"
 p1_rod = nil
 current_power = 0
 max_power = 100
+add_freq = 300
+remove_freq = 500
+max_fish = 5
+min_cast_dist = 5
+min_cast_angle = 0.55
+max_cast_angle = 0.95
+
+function add_fish()
+    local x = flr(rnd(100))
+    local y = flr(rnd(100))
+    local new_fish = fish.mk('f'..#fishes, x, y)
+    add(fishes, new_fish)
+    add(scene, new_fish)
+end
+
+function remove_fish()
+    if #fishes > 0 then
+        local i = flr(rnd(#fishes)) + 1
+        local f = fishes[i]
+        del(scene, f)
+        del(fishes, f)
+    end
+end
 
 function _init()
     log.debug = true
@@ -28,10 +51,6 @@ function _init()
     add(scene, cam)
 
     fishes = {}
-    add(fishes, fish.mk('f1', 10, 20))
-    add(fishes, fish.mk('f2', 60, 92))
-    add(scene, fishes[1])
-    add(scene, fishes[2])
 
     p1_rod = rod.mk('rod', 64, 110)
     add(scene, p1_rod)
@@ -60,14 +79,15 @@ function _update()
                 if btnp(1) then
                     p1_rod.cast_angle -= 0.05
                 end
-                p1_rod.cast_angle = mid(0.55, p1_rod.cast_angle, 0.95)
+                p1_rod.cast_angle = mid(min_cast_angle, p1_rod.cast_angle, max_cast_angle)
 
                 if btn(4) then
-                    current_power = mid(0, current_power + 1, 100)
-
+                    current_power = mid(0, current_power + 2, max_power)
                 else
-                    if current_power > 0 then
+                    if current_power > min_cast_dist then
                         p1_rod.cast(p1_rod, current_power)
+                    else
+                        current_power = 0
                     end
                 end
             end
@@ -95,6 +115,14 @@ function _update()
             end
         end
 
+        -- Add / remove fish
+        if (#fishes < max_fish and flr(rnd(add_freq)) == 1) then
+          add_fish()
+        end
+        if (#fishes > 0 and flr(rnd(remove_freq)) == 1) then
+            remove_fish()
+        end
+
         -- Debug Map toggle
         if btnp(2) then
             map -= 1
@@ -106,8 +134,8 @@ function _update()
     end
 
     -- Debug
-    log.log("Mem: "..stat(0).." CPU: "..stat(1))
-    log.log(p1_rod.state)
+    --log.log("Mem: "..(stat(0)/2048.0).."% CPU: "..(stat(1)/1.0).."%")
+    log.log("fish: "..#fishes.." rod: "..p1_rod.state)
 end
 
 function _draw()

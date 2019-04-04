@@ -13,7 +13,7 @@ local log = {
         if log.debug then
             color(7)
             for i = 1, #log._data do
-                print(log._data[i], 5, 8 * i)
+                print(log._data[i], 5, 5 + (8 * (i - 1)))
             end
         end
 

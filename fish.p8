@@ -151,7 +151,7 @@ local log = {
         if log.debug then
             color(7)
             for i = 1, #log._data do
-                print(log._data[i], 5, 8 * i)
+                print(log._data[i], 5, 5 + (8 * (i - 1)))
             end
         end
 
@@ -288,9 +288,6 @@ local fish = {
         renderer.attach(f, 1)
 
         f.update = function(self)
-            -- @TODO Move
-            -- @TODO Bite
-
             -- Show / hide randomly
             if (flr(rnd(100)) == 1) then
                 if self.visible == true then
@@ -409,12 +406,6 @@ local rod = {
                 self.lure.x += self.vel.x
                 self.lure.y += self.vel.y
 
-                --if v2.mag(v2.mk(self.lure.x, self.lure.y) - v2.mk(self.x, self.y - 10)) > self.cast_distance then
-                --    local new_lure = self.cast_distance * v2.norm(v2.mk(self.lure.x, self.lure.y) - v2.mk(self.x, self.y))
-                --    self.lure.x = self.x + new_lure.x
-                --    self.lure.y = self.y - 10 - new_lure.y
-                --end
-
                 if self.lure.y > lure_home(self).y then
                     self.lure.y = lure_home(self).y
                 end
@@ -501,9 +492,9 @@ package._c["ui"]=function()
 local ui = {
     render_power_bar = function(current, max)
         w = 120
-        h = 10
+        h = 5
         x0 = (128 - w) / 2
-        y = 4
+        y = 127 - h - 4
         x1 = 127 - ((128 - w) / 2)
         pct = (x1 - 1 - x0 - 1) * (current / max)
         current_x0 = x0 + 1
@@ -541,6 +532,29 @@ state = "ingame"
 p1_rod = nil
 current_power = 0
 max_power = 100
+add_freq = 300
+remove_freq = 500
+max_fish = 5
+min_cast_dist = 5
+min_cast_angle = 0.55
+max_cast_angle = 0.95
+
+function add_fish()
+    local x = flr(rnd(100))
+    local y = flr(rnd(100))
+    local new_fish = fish.mk('f'..#fishes, x, y)
+    add(fishes, new_fish)
+    add(scene, new_fish)
+end
+
+function remove_fish()
+    if #fishes > 0 then
+        local i = flr(rnd(#fishes)) + 1
+        local f = fishes[i]
+        del(scene, f)
+        del(fishes, f)
+    end
+end
 
 function _init()
     log.debug = true
@@ -551,10 +565,6 @@ function _init()
     add(scene, cam)
 
     fishes = {}
-    add(fishes, fish.mk('f1', 10, 20))
-    add(fishes, fish.mk('f2', 60, 92))
-    add(scene, fishes[1])
-    add(scene, fishes[2])
 
     p1_rod = rod.mk('rod', 64, 110)
     add(scene, p1_rod)
@@ -583,15 +593,15 @@ function _update()
                 if btnp(1) then
                     p1_rod.cast_angle -= 0.05
                 end
-                p1_rod.cast_angle = mid(0.55, p1_rod.cast_angle, 0.95)
+                p1_rod.cast_angle = mid(min_cast_angle, p1_rod.cast_angle, max_cast_angle)
 
-                -- @TODO Control cast distance
                 if btn(4) then
-                    current_power = mid(0, current_power + 1, 100)
-
+                    current_power = mid(0, current_power + 2, max_power)
                 else
-                    if current_power > 0 then
+                    if current_power > min_cast_dist then
                         p1_rod.cast(p1_rod, current_power)
+                    else
+                        current_power = 0
                     end
                 end
             end
@@ -619,6 +629,14 @@ function _update()
             end
         end
 
+        -- Add / remove fish
+        if (#fishes < max_fish and flr(rnd(add_freq)) == 1) then
+          add_fish()
+        end
+        if (#fishes > 0 and flr(rnd(remove_freq)) == 1) then
+            remove_fish()
+        end
+
         -- Debug Map toggle
         if btnp(2) then
             map -= 1
@@ -630,8 +648,8 @@ function _update()
     end
 
     -- Debug
-    log.log("Mem: "..stat(0).." CPU: "..stat(1))
-    log.log(p1_rod.state)
+    --log.log("Mem: "..(stat(0)/2048.0).."% CPU: "..(stat(1)/1.0).."%")
+    log.log("fish: "..#fishes.." rod: "..p1_rod.state)
 end
 
 function _draw()
@@ -644,14 +662,14 @@ function _draw()
     log.render()
 end
 __gfx__
-00000000022002200099990000040000eee77eee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000220000000900000040000ee7ee7ee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000030002222000000900000040000e7eeee7e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000003000222222000009000000400007ee77ee70000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-030030000222222000009000000400007ee77ee70000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00330000022222200000900000040000e7eeee7e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00030000002222000900900000555500ee7ee7ee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00030000000220000099000000044000eee77eee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000022002200099990000040000000770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000220000000900000040000007007000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000030002222000000900000040000070000700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000300022222200000900000040000700770070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+03003000022222200000900000040000700770070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00330000022222200000900000040000070000700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00030000002222000900900000555500007007000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00030000000220000099000000044000000770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 
 __gff__
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000

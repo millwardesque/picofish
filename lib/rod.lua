@@ -89,12 +89,6 @@ local rod = {
                 self.lure.x += self.vel.x
                 self.lure.y += self.vel.y
 
-                --if v2.mag(v2.mk(self.lure.x, self.lure.y) - v2.mk(self.x, self.y - 10)) > self.cast_distance then
-                --    local new_lure = self.cast_distance * v2.norm(v2.mk(self.lure.x, self.lure.y) - v2.mk(self.x, self.y))
-                --    self.lure.x = self.x + new_lure.x
-                --    self.lure.y = self.y - 10 - new_lure.y
-                --end
-
                 if self.lure.y > lure_home(self).y then
                     self.lure.y = lure_home(self).y
                 end

@@ -9,9 +9,6 @@ local fish = {
         renderer.attach(f, 1)
 
         f.update = function(self)
-            -- @TODO Move
-            -- @TODO Bite
-
             -- Show / hide randomly
             if (flr(rnd(100)) == 1) then
                 if self.visible == true then
