@@ -279,21 +279,38 @@ end
 package._c["fish"]=function()
 game_obj = require('game_obj')
 log = require('log')
+v2 = require('v2')
 
 local fish = {
     mk = function(name, x, y)
         local f = game_obj.mk(name, 'fish', x, y)
         f.visible = true
+        f.state = 'swim'
+        f.target = nil
+        f.speed = 0.15
 
         renderer.attach(f, 1)
 
         f.update = function(self)
             -- Show / hide randomly
-            if (flr(rnd(100)) == 1) then
-                if self.visible == true then
-                    self.hide(self)
-                else
-                    self.show(self)
+            if self.visible == true and flr(rnd(500)) == 1 then
+                self.hide(self)
+            elseif self.visible == false and flr(rnd(500)) then
+                self.show(self)
+            end
+
+            if self.state == 'swim' then
+                if self.target == nil then
+                    self.target = v2.mk(rnd(128), rnd(128))
+                end
+
+                local dist = self.target - self.v2_pos(self)
+                if v2.mag(dist) < 4 then   -- Target reached
+                    self.target = nil
+                else                    -- Swim to target
+                    local vel = v2.norm(dist) * self.speed
+                    self.x += vel.x
+                    self.y += vel.y
                 end
             end
         end
@@ -532,8 +549,8 @@ state = "ingame"
 p1_rod = nil
 current_power = 0
 max_power = 100
-add_freq = 300
-remove_freq = 500
+add_freq = 100
+remove_freq = 1000
 max_fish = 5
 min_cast_dist = 5
 min_cast_angle = 0.55
@@ -565,6 +582,7 @@ function _init()
     add(scene, cam)
 
     fishes = {}
+    add_fish()
 
     p1_rod = rod.mk('rod', 64, 110)
     add(scene, p1_rod)

@@ -18,8 +18,8 @@ state = "ingame"
 p1_rod = nil
 current_power = 0
 max_power = 100
-add_freq = 300
-remove_freq = 500
+add_freq = 100
+remove_freq = 1000
 max_fish = 5
 min_cast_dist = 5
 min_cast_angle = 0.55
@@ -51,6 +51,7 @@ function _init()
     add(scene, cam)
 
     fishes = {}
+    add_fish()
 
     p1_rod = rod.mk('rod', 64, 110)
     add(scene, p1_rod)

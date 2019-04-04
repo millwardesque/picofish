@@ -1,4 +1,3 @@
-Fish swim
 Fish bite
 Fish resist reeling
 Fish stamina
