@@ -6,6 +6,7 @@ v2 = require('v2')
 
 fish = require('fish')
 rod = require('rod')
+ui = require('ui')
 
 map = 1
 water = {13, 12, 1}
@@ -15,6 +16,8 @@ fishes = nil
 scene = nil
 state = "ingame"
 p1_rod = nil
+current_power = 0
+max_power = 100
 
 function _init()
     log.debug = true
@@ -48,6 +51,7 @@ function _update()
             if (not p1_rod.can_cast) then
                 if not btn(4) then
                     p1_rod.can_cast = true
+                    current_power = 0
                 end
             else
                 if btnp(0) then
@@ -58,10 +62,13 @@ function _update()
                 end
                 p1_rod.cast_angle = mid(0.55, p1_rod.cast_angle, 0.95)
 
-                -- @TODO Control cast distance
-                -- @TODO Show cast distance meter
-                if btnp(4) then
-                    p1_rod.cast(p1_rod, 50)
+                if btn(4) then
+                    current_power = mid(0, current_power + 1, 100)
+
+                else
+                    if current_power > 0 then
+                        p1_rod.cast(p1_rod, current_power)
+                    end
                 end
             end
         elseif p1_rod.state == 'reeling' then
@@ -108,6 +115,7 @@ function _draw()
 
     background = nil
     renderer.render(cam, scene, background)
+    ui.render_power_bar(current_power, max_power)
 
     log.render()
 end
