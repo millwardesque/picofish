@@ -6,7 +6,5 @@ Lake map
 Fish types
 Fish size
 Drag left / right
-Cast strength cycling
 Camera follow rod upstream
 Lure types
-Follow lure with camera

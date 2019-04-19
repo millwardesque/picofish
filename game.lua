@@ -16,7 +16,9 @@ fishes = nil
 scene = nil
 state = "ingame"
 p1_rod = nil
+power_direction_mult = 1
 current_power = 0
+cast_power_incr = 2
 max_power = 100
 add_freq = 100
 remove_freq = 1000
@@ -83,7 +85,11 @@ function _update()
                 p1_rod.cast_angle = mid(min_cast_angle, p1_rod.cast_angle, max_cast_angle)
 
                 if btn(4) then
-                    current_power = mid(0, current_power + 2, max_power)
+                    current_power = mid(0, current_power + cast_power_incr, max_power)
+
+                    if current_power == 0 or current_power == max_power then
+                        cast_power_incr *= -1
+                    end
                 else
                     if current_power > min_cast_dist then
                         p1_rod.cast(p1_rod, current_power)
